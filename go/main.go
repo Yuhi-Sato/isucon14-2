@@ -10,9 +10,9 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
@@ -58,16 +58,23 @@ func setup() http.Handler {
 	dbConfig.Net = "tcp"
 	dbConfig.DBName = dbname
 	dbConfig.ParseTime = true
+	dbConfig.InterpolateParams = true
 
-	_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
-	if err != nil {
-		panic(err)
+	// NOTE: 再起動試験対策
+	for {
+		_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
+
+		if err == nil {
+			db = _db
+			break
+		}
+
+		time.Sleep(1 * time.Second)
 	}
-	db = _db
 
 	mux := chi.NewRouter()
-	mux.Use(middleware.Logger)
-	mux.Use(middleware.Recoverer)
+	// mux.Use(middleware.Logger)
+	// mux.Use(middleware.Recoverer)
 	mux.HandleFunc("POST /api/initialize", postInitialize)
 
 	// app handlers
