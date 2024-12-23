@@ -1,0 +1,91 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype polyline
+
+class node5 as "chair_locations  /* 椅子の現在位置情報テーブル */" {
+   chair_id  /* 椅子ID */: varchar(26)
+   latitude  /* 経度 */: int
+   longitude  /* 緯度 */: int
+   created_at  /* 登録日時 */: datetime(6)
+   id: varchar(26)
+}
+class node0 as "chair_models  /* 椅子モデルテーブル */" {
+   speed  /* 移動速度 */: int
+   name  /* 椅子モデル名 */: varchar(50)
+}
+class node7 as "chairs  /* 椅子情報テーブル */" {
+   owner_id  /* オーナーID */: varchar(26)
+   name  /* 椅子の名前 */: varchar(30)
+   model  /* 椅子のモデル */: text
+   is_active  /* 配椅子受付中かどうか */: tinyint(1)
+   access_token  /* アクセストークン */: varchar(255)
+   created_at  /* 登録日時 */: datetime(6)
+   updated_at  /* 更新日時 */: datetime(6)
+   id  /* 椅子ID */: varchar(26)
+}
+class node6 as "coupons  /* クーポンテーブル */" {
+   discount  /* 割引額 */: int
+   created_at  /* 付与日時 */: datetime(6)
+   used_by  /* クーポンが適用されたライドのID */: varchar(26)
+   user_id  /* 所有しているユーザーのID */: varchar(26)
+   code  /* クーポンコード */: varchar(255)
+}
+class node9 as "owners  /* 椅子のオーナー情報テーブル */" {
+   name  /* オーナー名 */: varchar(30)
+   access_token  /* アクセストークン */: varchar(255)
+   chair_register_token  /* 椅子登録トークン */: varchar(255)
+   created_at  /* 登録日時 */: datetime(6)
+   updated_at  /* 更新日時 */: datetime(6)
+   id  /* オーナーID */: varchar(26)
+}
+class node4 as "payment_tokens  /* 決済トークンテーブル */" {
+   token  /* 決済トークン */: varchar(255)
+   created_at  /* 登録日時 */: datetime(6)
+   user_id  /* ユーザーID */: varchar(26)
+}
+class node3 as "ride_statuses  /* ライドステータスの変更履歴テーブル */" {
+   ride_id  /* ライドID */: varchar(26)
+   status  /* 状態 */: enum('matching', 'enroute', 'pickup', 'carrying', 'arrived', 'completed')
+   created_at  /* 状態変更日時 */: datetime(6)
+   app_sent_at  /* ユーザーへの状態通知日時 */: datetime(6)
+   chair_sent_at  /* 椅子への状態通知日時 */: datetime(6)
+   id: varchar(26)
+}
+class node8 as "rides  /* ライド情報テーブル */" {
+   user_id  /* ユーザーID */: varchar(26)
+   chair_id  /* 割り当てられた椅子ID */: varchar(26)
+   pickup_latitude  /* 配車位置(経度) */: int
+   pickup_longitude  /* 配車位置(緯度) */: int
+   destination_latitude  /* 目的地(経度) */: int
+   destination_longitude  /* 目的地(緯度) */: int
+   evaluation  /* 評価 */: int
+   created_at  /* 要求日時 */: datetime(6)
+   updated_at  /* 状態更新日時 */: datetime(6)
+   id  /* ライドID */: varchar(26)
+}
+class node1 as "settings  /* システム設定テーブル */" {
+   value  /* 設定値 */: text
+   name  /* 設定名 */: varchar(30)
+}
+class node2 as "users  /* 利用者情報テーブル */" {
+   username  /* ユーザー名 */: varchar(30)
+   firstname  /* 本名(名前) */: varchar(30)
+   lastname  /* 本名(名字) */: varchar(30)
+   date_of_birth  /* 生年月日 */: varchar(30)
+   access_token  /* アクセストークン */: varchar(255)
+   invitation_code  /* 招待トークン */: varchar(30)
+   created_at  /* 登録日時 */: datetime(6)
+   updated_at  /* 更新日時 */: datetime(6)
+   id  /* ユーザーID */: varchar(26)
+}
+
+node5  -[#595959,plain]-^  node7 : "chair_id:id"
+node7  -[#595959,plain]-^  node9 : "owner_id:id"
+node6  -[#595959,plain]-^  node2 : "user_id:id"
+node4  -[#595959,plain]-^  node2 : "user_id:id"
+node3  -[#595959,plain]-^  node8 : "ride_id:id"
+node8  -[#595959,plain]-^  node7 : "chair_id:id"
+node8  -[#595959,plain]-^  node2 : "user_id:id"
+@enduml
