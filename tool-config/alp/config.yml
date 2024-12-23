@@ -26,3 +26,5 @@ matching_groups:            # array
 
 - /api/internal/matching$
 
+- /assets
+- /images
