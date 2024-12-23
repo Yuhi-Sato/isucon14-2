@@ -12,10 +12,10 @@ matching_groups:            # array
 - /api/app/rides/estimated-fare$
 - /api/app/rides/[^/]+/evaluation$
 - /api/app/notification$
-- /api/app/nearby-chairs$
+- /api/app/nearby-chairs
 
 - /api/owner/owners$
-- /api/owner/sales$
+- /api/owner/sales
 - /api/owner/chairs$
 
 - /api/chair/chairs$
