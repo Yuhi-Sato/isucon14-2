@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	crand "crypto/rand"
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -9,7 +12,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -18,6 +23,77 @@ import (
 )
 
 var db *sqlx.DB
+
+type wrappedDriver struct {
+	driver.Driver
+}
+
+func (d *wrappedDriver) Open(name string) (driver.Conn, error) {
+	conn, err := d.Driver.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return &wrappedConn{Conn: conn}, nil
+}
+
+type wrappedConn struct {
+	driver.Conn
+}
+
+func (c *wrappedConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	queryWithCallerInfo := c.addCallerInfo(query)
+	if queryerCtx, ok := c.Conn.(driver.QueryerContext); ok {
+		return queryerCtx.QueryContext(ctx, queryWithCallerInfo, args)
+	}
+	return nil, driver.ErrSkip
+}
+
+func (c *wrappedConn) addCallerInfo(query string) string {
+	var (
+		file string
+		line int
+	)
+
+	if pc, f, l, ok := runtime.Caller(3); ok {
+		file = shortFileName(f)
+		line = l
+		shortFuncName := shortFunctionName(pc)
+
+		comment := fmt.Sprintf("/* %s:%s %s */ ", file, toFullWidthNumber(line), shortFuncName)
+		return comment + query
+	}
+
+	return query
+}
+
+func shortFileName(path string) string {
+	parts := strings.Split(path, "/")
+	if len(parts) > 1 {
+		return parts[len(parts)-1]
+	}
+	return path
+}
+
+func shortFunctionName(pc uintptr) string {
+	funcDetails := runtime.FuncForPC(pc)
+	if funcDetails != nil {
+		return shortFileName(funcDetails.Name())
+	}
+	return "unknown"
+}
+
+func toFullWidthNumber(num int) string {
+	result := ""
+	numStr := strconv.Itoa(num)
+	for _, r := range numStr {
+		result += string(rune(r) + 0xFEE0) // Convert ASCII to full-width
+	}
+	return result
+}
+
+func init() {
+	sql.Register("wrapped-mysql", &wrappedDriver{Driver: mysql.MySQLDriver{}})
+}
 
 func main() {
 	mux := setup()
@@ -62,7 +138,7 @@ func setup() http.Handler {
 
 	// NOTE: 再起動試験対策
 	for {
-		_db, err := sqlx.Connect("mysql", dbConfig.FormatDSN())
+		_db, err := sqlx.Connect("wrapped-mysql", dbConfig.FormatDSN())
 
 		if err == nil {
 			db = _db
