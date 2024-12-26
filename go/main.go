@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -48,18 +49,32 @@ func (c *wrappedConn) QueryContext(ctx context.Context, query string, args []dri
 	return nil, driver.ErrSkip
 }
 
+var files []string = []string{"app_handlers.go", "chair_handlers.go", "internal_handlers.go", "owner_handlers.go", "payment_gateway.go"}
+
 func (c *wrappedConn) addCallerInfo(query string) string {
 	var (
-		file string
-		line int
+		file     string
+		line     int
+		funcName string
 	)
 
-	if pc, f, l, ok := runtime.Caller(3); ok {
-		file = shortFileName(f)
-		line = l
-		shortFuncName := shortFunctionName(pc)
+	for skip := 0; ; skip++ {
+		pc, f, l, ok := runtime.Caller(skip)
+		if !ok {
+			break
+		}
 
-		comment := fmt.Sprintf("/* %s:%s %s */ ", file, toFullWidthNumber(line), shortFuncName)
+		funcName = runtime.FuncForPC(pc).Name()
+
+		file := shortFileName(f)
+		if slices.Contains(files, file) {
+			line = l
+			break
+		}
+	}
+
+	if file != "" && funcName != "" {
+		comment := fmt.Sprintf("/* %s:%s %s */ ", file, toFullWidthNumber(line), funcName)
 		return comment + query
 	}
 
@@ -72,14 +87,6 @@ func shortFileName(path string) string {
 		return parts[len(parts)-1]
 	}
 	return path
-}
-
-func shortFunctionName(pc uintptr) string {
-	funcDetails := runtime.FuncForPC(pc)
-	if funcDetails != nil {
-		return shortFileName(funcDetails.Name())
-	}
-	return "unknown"
 }
 
 func toFullWidthNumber(num int) string {
