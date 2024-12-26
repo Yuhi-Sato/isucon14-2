@@ -66,7 +66,7 @@ func (c *wrappedConn) addCallerInfo(query string) string {
 
 		funcName = runtime.FuncForPC(pc).Name()
 
-		file := shortFileName(f)
+		file = shortFileName(f)
 		if slices.Contains(files, file) {
 			line = l
 			break
