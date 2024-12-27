@@ -197,19 +197,19 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 	chairs := []chairWithDetail{}
 	if err := db.SelectContext(ctx, &chairs,
 		`SELECT c.id,
-			c.owner_id,
-			c.name,
-			c.access_token,
-			c.model,
-			c.is_active,
-			c.created_at,
-			c.updated_at,
-			ctd.total_distance AS total_distance,
-			ctd.total_distance_updated_at AS total_distance_updated_at
-		FROM chairs c
-		LEFT JOIN chair_total_distances ctd
-		ON chairs.id = chair_total_distances.chair_id
-		WHERE c.owner_id = ?
+       c.owner_id,
+       c.name,
+       c.access_token,
+       c.model,
+       c.is_active,
+       c.created_at,
+       c.updated_at,
+       ctd.total_distance AS total_distance,
+       ctd.total_distance_updated_at AS total_distance_updated_at
+FROM chairs c
+         LEFT JOIN chair_total_distances ctd
+                   ON c.id = ctd.chair_id
+WHERE c.owner_id = ?
 `, owner.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
