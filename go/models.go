@@ -30,9 +30,9 @@ type ChairLocation struct {
 }
 
 type ChairTotalDistance struct {
-	ChairID                string `db:"chair_id"`
-	TotalDistance          int    `db:"total_distance"`
-	TotalDistanceUpdatedAt string `db:"total_distance_updated_at"`
+	ChairID                string    `db:"chair_id"`
+	TotalDistance          int       `db:"total_distance"`
+	TotalDistanceUpdatedAt time.Time `db:"total_distance_updated_at"`
 }
 
 type User struct {
