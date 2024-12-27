@@ -111,11 +111,21 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	latestChairLocation := &ChairLocation{}
+	if err := tx.GetContext(ctx, latestChairLocation, "SELECT latitude, longitude FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1", chair.ID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+	}
+
+	distance := calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
+
 	chairLocationID := ulid.Make().String()
 	if _, err := tx.ExecContext(
 		ctx,
-		`INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)`,
-		chairLocationID, chair.ID, req.Latitude, req.Longitude,
+		`INSERT INTO chair_total_distances (chair_id, distance) VALUES (?, ?) ON DUPLICATE KEY UPDATE distance = distance + ?`,
+		chair.ID, distance,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
