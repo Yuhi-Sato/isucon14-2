@@ -244,7 +244,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, ctd := range chairTotalDistances {
-		if _, err := db.NamedExecContext(ctx, "INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (:chair_id, :total_distance)", ctd); err != nil {
+		if _, err := db.NamedExecContext(ctx, "INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at) VALUES (:chair_id, :total_distance, :total_distance_updated_at)", ctd); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}

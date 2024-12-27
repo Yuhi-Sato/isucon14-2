@@ -205,7 +205,7 @@ func ownerGetChairs(w http.ResponseWriter, r *http.Request) {
 			c.created_at,
 			c.updated_at,
 			ctd.total_distance AS total_distance,
-			ctd.updated_at AS total_distance_updated_at
+			ctd.total_distance_updated_at AS total_distance_updated_at
 		FROM chairs c
 		LEFT JOIN chair_total_distances ctd
 		ON chairs.id = chair_total_distances.chair_id
