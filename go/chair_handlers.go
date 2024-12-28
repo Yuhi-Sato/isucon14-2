@@ -131,6 +131,15 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, err := tx.ExecContext(
+		ctx,
+		"INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)",
+		chairLocationID, chair.ID, req.Latitude, req.Longitude,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
 	location := &ChairLocation{}
 	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
