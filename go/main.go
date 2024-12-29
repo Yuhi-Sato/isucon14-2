@@ -243,11 +243,11 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, ctd := range chairTotalDistances {
-		if _, err := db.NamedExecContext(ctx, "INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at) VALUES (:chair_id, :total_distance, :total_distance_updated_at)", ctd); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+	if _, err := db.NamedExecContext(ctx,
+		"INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at) VALUES (:chair_id, :total_distance, :total_distance_updated_at)",
+		chairTotalDistances); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})

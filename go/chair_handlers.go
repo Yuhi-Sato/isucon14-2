@@ -112,16 +112,21 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	latestChairLocation := &ChairLocation{}
-	if err := tx.GetContext(ctx, latestChairLocation, "SELECT latitude, longitude FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1", chair.ID); err != nil {
+	if err := tx.GetContext(ctx, latestChairLocation,
+		"SELECT latitude, longitude FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1",
+		chair.ID); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
+		} else {
+			// NOTE: 座標がない場合は最新の座標を更新
+			latestChairLocation.Latitude = req.Latitude
+			latestChairLocation.Longitude = req.Longitude
 		}
 	}
 
 	distance := calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 
-	chairLocationID := ulid.Make().String()
 	if _, err := tx.ExecContext(
 		ctx,
 		`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?) ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
@@ -131,6 +136,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: 最新の座標だけで良い
+	chairLocationID := ulid.Make().String()
 	if _, err := tx.ExecContext(
 		ctx,
 		"INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)",
