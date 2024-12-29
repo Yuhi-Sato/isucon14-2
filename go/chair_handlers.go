@@ -121,19 +121,26 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			// NOTE: 座標がない場合はdistanceを0にする
-			distance = 0
+			if _, err := tx.ExecContext(
+				ctx,
+				`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?)`,
+				chair.ID, 0,
+			); err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
 		}
 	} else {
 		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
-	}
 
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?) ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
-		chair.ID, distance, distance,
-	); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
+		if _, err := tx.ExecContext(
+			ctx,
+			`UPDATE chair_total_distances SET total_distance =  ?`,
+			chair.ID, distance, distance,
+		); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 	}
 
 	// TODO: 最新の座標だけで良い
