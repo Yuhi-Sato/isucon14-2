@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/oklog/ulid/v2"
@@ -116,27 +115,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	var distance int
 	if err := tx.GetContext(ctx, latestChairLocation,
 		"SELECT latitude, longitude FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1",
-		chair.ID); err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		} else {
-			// NOTE: 座標がない場合はdistanceを0にする
-			distance = 0
-		}
-	} else {
-		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
-	}
-
-	if chair.ID == "01JG85BW3S0KK4NDRYCQ1CPSKN" {
-		log.Print("distance: ", distance)
-	}
-
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?) ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
-		chair.ID, distance, distance,
-	); err != nil {
+		chair.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -147,6 +126,17 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		ctx,
 		"INSERT INTO chair_locations (id, chair_id, latitude, longitude) VALUES (?, ?, ?, ?)",
 		chairLocationID, chair.ID, req.Latitude, req.Longitude,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
+
+	if _, err := tx.ExecContext(
+		ctx,
+		`UPDATE chair_total_distances SET total_distance = total_distance + ? WHERE chair_id = ?`,
+		distance, distance, chair.ID,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
