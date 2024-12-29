@@ -136,7 +136,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	if _, err := tx.ExecContext(
 		ctx,
 		`UPDATE chair_total_distances SET total_distance = total_distance + ? WHERE chair_id = ?`,
-		distance, distance, chair.ID,
+		distance, chair.ID,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
