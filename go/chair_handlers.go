@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/oklog/ulid/v2"
@@ -121,26 +122,23 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			// NOTE: 座標がない場合はdistanceを0にする
-			if _, err := tx.ExecContext(
-				ctx,
-				`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?)`,
-				chair.ID, 0,
-			); err != nil {
-				writeError(w, http.StatusInternalServerError, err)
-				return
-			}
+			distance = 0
 		}
 	} else {
 		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
+	}
 
-		if _, err := tx.ExecContext(
-			ctx,
-			`UPDATE chair_total_distances SET total_distance =  ?`,
-			chair.ID, distance, distance,
-		); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+	if chair.ID == "01JG85BW3S0KK4NDRYCQ1CPSKN" {
+		log.Print("distance: ", distance)
+	}
+
+	if _, err := tx.ExecContext(
+		ctx,
+		`INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?) ON DUPLICATE KEY UPDATE total_distance = total_distance + ?`,
+		chair.ID, distance, distance,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	// TODO: 最新の座標だけで良い
