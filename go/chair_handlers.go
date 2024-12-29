@@ -136,26 +136,22 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var distance int
 	if chairTotalDistance.ChairID == "" {
-		if _, err := tx.ExecContext(
-			ctx,
-			"INSERT INTO chair_total_distances (chair_id, total_distance) VALUES (?, ?)",
-			chair.ID, 0,
-		); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		distance = 0
 	} else {
-		distance := calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
+		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
+	}
 
-		if _, err := tx.ExecContext(
-			ctx,
-			`UPDATE chair_total_distances SET total_distance = total_distance + ? WHERE chair_id = ?`,
-			distance, chair.ID,
-		); err != nil {
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+	if _, err := db.ExecContext(
+		ctx,
+		`INSERT INTO chair_total_distances (chair_id, total_distance)
+		 VALUES (?, ?)
+		 ON DUPLICATE KEY UPDATE total_distance = total_distance + VALUES(total_distance)`,
+		chair.ID, distance,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
 
 	location := &ChairLocation{}
