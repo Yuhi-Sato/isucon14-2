@@ -74,7 +74,7 @@ func (c *wrappedConn) addCallerInfo(query string) string {
 	}
 
 	if file != "" && funcName != "" {
-		comment := fmt.Sprintf("/* %s:%s %s */ ", file, toFullWidthNumber(line), funcName)
+		comment := fmt.Sprintf("/* %s:%d %s */ ", file, line, funcName)
 		return comment + query
 	}
 
@@ -89,14 +89,14 @@ func shortFileName(path string) string {
 	return path
 }
 
-func toFullWidthNumber(num int) string {
-	result := ""
-	numStr := strconv.Itoa(num)
-	for _, r := range numStr {
-		result += string(rune(r) + 0xFEE0) // Convert ASCII to full-width
-	}
-	return result
-}
+// func toFullWidthNumber(num int) string {
+// 	result := ""
+// 	numStr := strconv.Itoa(num)
+// 	for _, r := range numStr {
+// 		result += string(rune(r) + 0xFEE0) // Convert ASCII to full-width
+// 	}
+// 	return result
+// }
 
 func init() {
 	sql.Register("wrapped-mysql", &wrappedDriver{Driver: mysql.MySQLDriver{}})
@@ -224,6 +224,28 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	chairTotalDistances := []ChairTotalDistance{}
+	query := `SELECT chair_id,
+                          SUM(IFNULL(distance, 0)) AS total_distance,
+                          MAX(created_at)          AS total_distance_updated_at
+                   FROM (SELECT chair_id,
+                                created_at,
+                                ABS(latitude - LAG(latitude) OVER (PARTITION BY chair_id ORDER BY created_at)) +
+                                ABS(longitude - LAG(longitude) OVER (PARTITION BY chair_id ORDER BY created_at)) AS distance
+                         FROM chair_locations) tmp
+                   GROUP BY chair_id`
+	if err := db.SelectContext(ctx, &chairTotalDistances, query); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if _, err := db.NamedExecContext(ctx,
+		"INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at) VALUES (:chair_id, :total_distance, :total_distance_updated_at)",
+		chairTotalDistances); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
