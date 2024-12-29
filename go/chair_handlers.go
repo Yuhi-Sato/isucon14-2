@@ -112,6 +112,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	latestChairLocation := &ChairLocation{}
+	var distance int
 	if err := tx.GetContext(ctx, latestChairLocation,
 		"SELECT latitude, longitude FROM chair_locations WHERE chair_id = ? ORDER BY created_at DESC LIMIT 1",
 		chair.ID); err != nil {
@@ -119,13 +120,12 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		} else {
-			// NOTE: 座標がない場合は最新の座標を更新
-			latestChairLocation.Latitude = req.Latitude
-			latestChairLocation.Longitude = req.Longitude
+			// NOTE: 座標がない場合はdistanceを0にする
+			distance = 0
 		}
+	} else {
+		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 	}
-
-	distance := calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 
 	if _, err := tx.ExecContext(
 		ctx,
