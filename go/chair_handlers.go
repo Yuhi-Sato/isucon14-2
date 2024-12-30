@@ -178,6 +178,11 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+
+				eb.Publish(ride.UserID, RideStatusEventData{
+					Ride:   *ride,
+					Status: "PICKUP",
+				})
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
@@ -185,13 +190,13 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+
+				eb.Publish(ride.UserID, RideStatusEventData{
+					Ride:   *ride,
+					Status: "ARRIVED",
+				})
 			}
 		}
-
-		eb.Publish(ride.UserID, RideStatusEventData{
-			Ride:   *ride,
-			Status: status,
-		})
 	}
 
 	if err := tx.Commit(); err != nil {
