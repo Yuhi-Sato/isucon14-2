@@ -89,15 +89,6 @@ func shortFileName(path string) string {
 	return path
 }
 
-// func toFullWidthNumber(num int) string {
-// 	result := ""
-// 	numStr := strconv.Itoa(num)
-// 	for _, r := range numStr {
-// 		result += string(rune(r) + 0xFEE0) // Convert ASCII to full-width
-// 	}
-// 	return result
-// }
-
 func init() {
 	sql.Register("wrapped-mysql", &wrappedDriver{Driver: mysql.MySQLDriver{}})
 }
@@ -170,7 +161,7 @@ func setup() http.Handler {
 		authedMux.HandleFunc("POST /api/app/rides", appPostRides)
 		authedMux.HandleFunc("POST /api/app/rides/estimated-fare", appPostRidesEstimatedFare)
 		authedMux.HandleFunc("POST /api/app/rides/{ride_id}/evaluation", appPostRideEvaluatation)
-		authedMux.HandleFunc("GET /api/app/notification", appGetNotification)
+		authedMux.HandleFunc("GET /api/app/notification", appGetNotificationWithSSE)
 		authedMux.HandleFunc("GET /api/app/nearby-chairs", appGetNearbyChairs)
 	}
 
