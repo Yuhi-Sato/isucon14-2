@@ -890,31 +890,22 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case rse := <-ch:
-			if rse.Data.Status == "COMPLETED" {
-				stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
-				if err != nil {
-					writeError(w, http.StatusInternalServerError, err)
-					return
-				}
+			data.Status = rse.Data.Status
 
-				data.Chair.Stats = stats
-				jsonData, err := json.Marshal(data)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				fmt.Fprintf(w, "data: %s\n", jsonData)
-				flusher.Flush()
-			} else {
-				data.Status = rse.Data.Status
-				jsonData, err := json.Marshal(data)
-				if err != nil {
-					w.WriteHeader(http.StatusInternalServerError)
-					return
-				}
-				fmt.Fprintf(w, "data: %s\n", jsonData)
-				flusher.Flush()
+			stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
 			}
+
+			data.Chair.Stats = stats
+			jsonData, err := json.Marshal(data)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n", jsonData)
+			flusher.Flush()
 		case <-ctx.Done():
 			return
 		}
