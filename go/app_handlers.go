@@ -898,7 +898,31 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			data.Chair.Stats = stats
+			if data.Chair == nil {
+				if rse.Data.Ride.ChairID.Valid {
+					chair := &Chair{}
+					if err := db.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, rse.Data.Ride.ChairID); err != nil {
+						writeError(w, http.StatusInternalServerError, err)
+						return
+					}
+
+					stats, err := getChairStatsWithoutTx(ctx, chair.ID)
+					if err != nil {
+						writeError(w, http.StatusInternalServerError, err)
+						return
+					}
+
+					data.Chair = &appGetNotificationResponseChair{
+						ID:    chair.ID,
+						Name:  chair.Name,
+						Model: chair.Model,
+						Stats: stats,
+					}
+				}
+			} else {
+				data.Chair.Stats = stats
+			}
+
 			jsonData, err := json.Marshal(data)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
