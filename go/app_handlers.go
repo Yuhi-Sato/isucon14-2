@@ -881,8 +881,6 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("initial response data: %s\n", jsonData)
-
 	fmt.Fprintf(w, "data: %s\n", jsonData)
 	flusher.Flush()
 
