@@ -890,46 +890,47 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case rse := <-ch:
-			data.RideID = rse.Data.Ride.ID
-			data.PickupCoordinate = Coordinate{
-				Latitude:  rse.Data.Ride.PickupLatitude,
-				Longitude: rse.Data.Ride.PickupLongitude,
-			}
-			data.DestinationCoordinate = Coordinate{
-				Latitude:  rse.Data.Ride.DestinationLatitude,
-				Longitude: rse.Data.Ride.DestinationLongitude,
-			}
-			data.Status = rse.Data.Status
-			data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
+			switch rse.Data.Status {
+			case "MATCHING", "ENROUTE":
+				data.Status = rse.Data.Status
+				data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
 
-			stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, err)
-				return
-			}
+				if data.Chair == nil {
+					if rse.Data.Ride.ChairID.Valid {
+						chair := &Chair{}
+						if err := db.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, rse.Data.Ride.ChairID); err != nil {
+							writeError(w, http.StatusInternalServerError, err)
+							return
+						}
 
-			if data.Chair == nil {
-				if rse.Data.Ride.ChairID.Valid {
-					chair := &Chair{}
-					if err := db.GetContext(ctx, chair, `SELECT * FROM chairs WHERE id = ?`, rse.Data.Ride.ChairID); err != nil {
-						writeError(w, http.StatusInternalServerError, err)
-						return
-					}
+						stats, err := getChairStatsWithoutTx(ctx, chair.ID)
+						if err != nil {
+							writeError(w, http.StatusInternalServerError, err)
+							return
+						}
 
-					stats, err := getChairStatsWithoutTx(ctx, chair.ID)
-					if err != nil {
-						writeError(w, http.StatusInternalServerError, err)
-						return
-					}
-
-					data.Chair = &appGetNotificationResponseChair{
-						ID:    chair.ID,
-						Name:  chair.Name,
-						Model: chair.Model,
-						Stats: stats,
+						data.Chair = &appGetNotificationResponseChair{
+							ID:    chair.ID,
+							Name:  chair.Name,
+							Model: chair.Model,
+							Stats: stats,
+						}
 					}
 				}
-			} else {
+			case "PICKUP", "CARRYING", "ARRIVED":
+				data.Status = rse.Data.Status
+				data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
+
+			case "COMPLETED":
+				data.Status = rse.Data.Status
+				data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
+
+				stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, err)
+					return
+				}
+
 				data.Chair.Stats = stats
 			}
 
