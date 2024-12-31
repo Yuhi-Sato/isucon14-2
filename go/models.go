@@ -29,6 +29,14 @@ type ChairLocation struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+type LatestChairLocation struct {
+	ChairID   string    `db:"chair_id"`
+	Latitude  int       `db:"latitude"`
+	Longitude int       `db:"longitude"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdateAt  time.Time `db:"updated_at"`
+}
+
 type ChairTotalDistance struct {
 	ChairID                string    `db:"chair_id"`
 	TotalDistance          int       `db:"total_distance"`
