@@ -891,6 +891,7 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case rse := <-ch:
 			data.Status = rse.Data.Status
+			data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
 
 			stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
 			if err != nil {
