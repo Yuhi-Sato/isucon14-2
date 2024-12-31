@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -900,6 +901,8 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 			}
 			data.Status = rse.Data.Status
 			data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
+
+			log.Printf("ride_id: %s, status: %s", rse.Data.Ride.ID, rse.Data.Status)
 
 			stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
 			if err != nil {
