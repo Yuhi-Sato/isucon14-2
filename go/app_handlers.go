@@ -946,9 +946,9 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 
 			log.Printf("response data: %s\n", jsonData)
 
-			if rse.Data.Status == "COMPLETED" {
-				return
-			}
+			// if rse.Data.Status == "COMPLETED" {
+			// 	return
+			// }
 		case <-ctx.Done():
 			return
 		}
