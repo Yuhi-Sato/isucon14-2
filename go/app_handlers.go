@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -941,8 +940,6 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprintf(w, "data: %s\n", jsonData)
 			flusher.Flush()
-
-			log.Printf("response data: %s\n", jsonData)
 
 			// if rse.Data.Status == "COMPLETED" {
 			// 	return
