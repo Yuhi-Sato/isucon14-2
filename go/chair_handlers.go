@@ -113,7 +113,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 
 	latestChairLocation := &LatestChairLocation{}
 	if err := tx.GetContext(ctx, latestChairLocation,
-		"SELECT latitude, longitude FROM latestChairLocation WHERE chair_id = ?",
+		"SELECT latitude, longitude FROM latest_chair_locations WHERE chair_id = ?",
 		chair.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -122,7 +122,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	// TODO: 最新の座標だけで良い
 	if _, err := tx.ExecContext(
 		ctx,
-		"INSERT INTO latestChairLocation (chair_id, latitude, longitude) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE latitude = VALUES(latitude), longitude = VALUES(longitude)",
+		"INSERT INTO latest_chair_locations (chair_id, latitude, longitude) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE latitude = VALUES(latitude), longitude = VALUES(longitude)",
 		chair.ID, req.Latitude, req.Longitude,
 	); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
