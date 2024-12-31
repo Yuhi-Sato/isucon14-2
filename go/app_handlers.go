@@ -884,7 +884,7 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 	flusher.Flush()
 
 	// NOTE: SSE実装
-	ch := make(chan RideStatusEvent)
+	ch := make(chan RideStatusEvent, 100)
 	eb.Subscribe(user.ID, ch)
 
 	for {
