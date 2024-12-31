@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/labstack/gommon/log"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -880,6 +881,9 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	log.Printf("initial response data: %s\n", jsonData)
+
 	fmt.Fprintf(w, "data: %s\n", jsonData)
 	flusher.Flush()
 
@@ -901,8 +905,6 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 			}
 			data.Status = rse.Data.Status
 			data.UpdateAt = rse.Data.Ride.UpdatedAt.UnixMilli()
-
-			log.Printf("ride_id: %s, status: %s", rse.Data.Ride.ID, rse.Data.Status)
 
 			stats, err := getChairStatsWithoutTx(ctx, rse.Data.Ride.ChairID.String)
 			if err != nil {
@@ -942,6 +944,8 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 			}
 			fmt.Fprintf(w, "data: %s\n", jsonData)
 			flusher.Flush()
+
+			log.Printf("response data: %s\n", jsonData)
 
 			if rse.Data.Status == "COMPLETED" {
 				return
