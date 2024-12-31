@@ -432,11 +432,6 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eb.Publish(user.ID, RideStatusEventData{
-		Ride:   ride,
-		Status: "MATCHING",
-	})
-
 	fare, err := calculateDiscountedFare(ctx, tx, user.ID, &ride, req.PickupCoordinate.Latitude, req.PickupCoordinate.Longitude, req.DestinationCoordinate.Latitude, req.DestinationCoordinate.Longitude)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -447,6 +442,11 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	eb.Publish(user.ID, RideStatusEventData{
+		Ride:   ride,
+		Status: "MATCHING",
+	})
 
 	writeJSON(w, http.StatusAccepted, &appPostRidesResponse{
 		RideID: rideID,
@@ -596,11 +596,6 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eb.Publish(ride.UserID, RideStatusEventData{
-		Ride:   *ride,
-		Status: "COMPLETED",
-	})
-
 	paymentToken := &PaymentToken{}
 	if err := tx.GetContext(ctx, paymentToken, `SELECT * FROM payment_tokens WHERE user_id = ?`, ride.UserID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -645,6 +640,11 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	eb.Publish(ride.UserID, RideStatusEventData{
+		Ride:   *ride,
+		Status: "COMPLETED",
+	})
 
 	writeJSON(w, http.StatusOK, &appPostRideEvaluationResponse{
 		CompletedAt: ride.UpdatedAt.UnixMilli(),
