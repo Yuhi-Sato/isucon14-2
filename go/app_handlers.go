@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/labstack/gommon/log"
 	"github.com/oklog/ulid/v2"
 )
 
@@ -891,9 +891,6 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case rse := <-ch:
-			log.Print(user.ID)
-			log.Print(rse.Data.Ride.ID)
-
 			data.RideID = rse.Data.Ride.ID
 			data.PickupCoordinate = Coordinate{
 				Latitude:  rse.Data.Ride.PickupLatitude,
@@ -943,6 +940,9 @@ func appGetNotificationWithSSE(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			fmt.Fprintf(w, "data: %s\n", jsonData)
+
+			log.Printf("data: %s\n", jsonData)
+
 			flusher.Flush()
 
 			if rse.Data.Status == "COMPLETED" {
