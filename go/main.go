@@ -7,9 +7,11 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"runtime"
@@ -89,20 +91,15 @@ func shortFileName(path string) string {
 	return path
 }
 
-// func toFullWidthNumber(num int) string {
-// 	result := ""
-// 	numStr := strconv.Itoa(num)
-// 	for _, r := range numStr {
-// 		result += string(rune(r) + 0xFEE0) // Convert ASCII to full-width
-// 	}
-// 	return result
-// }
-
 func init() {
 	sql.Register("wrapped-mysql", &wrappedDriver{Driver: mysql.MySQLDriver{}})
 }
 
 func main() {
+	go func() {
+		log.Fatal(http.ListenAndServe(":6060", nil))
+	}()
+
 	mux := setup()
 	slog.Info("Listening on :8080")
 	http.ListenAndServe(":8080", mux)
@@ -170,7 +167,7 @@ func setup() http.Handler {
 		authedMux.HandleFunc("POST /api/app/rides", appPostRides)
 		authedMux.HandleFunc("POST /api/app/rides/estimated-fare", appPostRidesEstimatedFare)
 		authedMux.HandleFunc("POST /api/app/rides/{ride_id}/evaluation", appPostRideEvaluatation)
-		authedMux.HandleFunc("GET /api/app/notification", appGetNotification)
+		authedMux.HandleFunc("GET /api/app/notification", appGetNotificationWithSSE)
 		authedMux.HandleFunc("GET /api/app/nearby-chairs", appGetNearbyChairs)
 	}
 

@@ -160,6 +160,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var newStatus string
+
 	ride := &Ride{}
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
@@ -178,6 +180,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+
+				newStatus = "PICKUP"
 			}
 
 			if req.Latitude == ride.DestinationLatitude && req.Longitude == ride.DestinationLongitude && status == "CARRYING" {
@@ -185,6 +189,8 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 					writeError(w, http.StatusInternalServerError, err)
 					return
 				}
+
+				newStatus = "ARRIVED"
 			}
 		}
 	}
@@ -192,6 +198,13 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
+	}
+
+	if newStatus != "" {
+		eb.Publish(ride.UserID, RideStatusEventData{
+			Ride:   *ride,
+			Status: newStatus,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
@@ -339,6 +352,15 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	switch req.Status {
 	// Acknowledge the ride
 	case "ENROUTE":
+		status, err := getLatestRideStatus(ctx, tx, ride.ID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
+		if status != "MATCHING" {
+			writeError(w, http.StatusBadRequest, errors.New("chair has not arrived yet"))
+			return
+		}
 		if _, err := tx.ExecContext(ctx, "INSERT INTO ride_statuses (id, ride_id, status) VALUES (?, ?, ?)", ulid.Make().String(), ride.ID, "ENROUTE"); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
@@ -358,6 +380,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
+
 	default:
 		writeError(w, http.StatusBadRequest, errors.New("invalid status"))
 	}
@@ -365,6 +388,13 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
+	}
+
+	if req.Status == "ENROUTE" || req.Status == "CARRYING" {
+		eb.Publish(ride.UserID, RideStatusEventData{
+			Ride:   *ride,
+			Status: req.Status,
+		})
 	}
 
 	w.WriteHeader(http.StatusNoContent)
