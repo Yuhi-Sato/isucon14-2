@@ -87,6 +87,8 @@ func chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chairByAccessToken.Delete(chair.AccessToken)
+
 	w.WriteHeader(http.StatusNoContent)
 }
 

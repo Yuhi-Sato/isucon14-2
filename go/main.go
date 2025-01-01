@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -25,7 +26,10 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var db *sqlx.DB
+var (
+	chairByAccessToken = sync.Map{}
+	db                 *sqlx.DB
+)
 
 type wrappedDriver struct {
 	driver.Driver
@@ -247,26 +251,13 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	latestChairLocation := []LatestChairLocation{}
-	query = `
-		SELECT chair_id, latitude, longitude, created_at
-		FROM (
-			SELECT *,
-				ROW_NUMBER() OVER (PARTITION BY chair_id ORDER BY created_at DESC) AS latest
-			FROM chair_locations
-		) as tmp
-		WHERE latest = 1
-	`
-	if err := db.SelectContext(ctx, &latestChairLocation, query); err != nil {
+	chairs := []Chair{}
+	if err := db.SelectContext(ctx, &chairs, "SELECT * FROM chairs"); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-
-	if _, err := db.NamedExecContext(ctx,
-		"INSERT INTO latest_chair_locations (chair_id, latitude, longitude, created_at) VALUES (:chair_id, :latitude, :longitude, :created_at)",
-		latestChairLocation); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
+	for _, chair := range chairs {
+		chairByAccessToken.Store(chair.AccessToken, chair)
 	}
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
