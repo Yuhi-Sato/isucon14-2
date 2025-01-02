@@ -121,7 +121,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: 最新の座標だけで良い
 	if _, err := tx.ExecContext(
 		ctx,
 		"INSERT INTO latest_chair_locations (chair_id, latitude, longitude) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE latitude = VALUES(latitude), longitude = VALUES(longitude)",

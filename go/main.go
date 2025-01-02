@@ -27,9 +27,10 @@ import (
 )
 
 var (
-	chairByAccessToken = sync.Map{}
-	db                 *sqlx.DB
-	paymentGatewayURL  string
+	chairByAccessToken   = sync.Map{}
+	db                   *sqlx.DB
+	paymentGatewayURL    string
+	chairTotalDistanceCh = make(chan ChairTotalDistance, 1000)
 )
 
 type wrappedDriver struct {
@@ -96,6 +97,31 @@ func shortFileName(path string) string {
 	return path
 }
 
+func chairTotalDistanceProcess() {
+	ChairTotalDistances := []ChairTotalDistance{}
+
+	query := `
+		INSERT INTO chair_total_distances (chair_id, total_distance)
+		 VALUES (:chair_id, :total_distance)
+		 ON DUPLICATE KEY UPDATE total_distance = total_distance + :total_distance
+	`
+
+	for {
+		select {
+		case chairTotalDistance := <-chairTotalDistanceCh:
+			ChairTotalDistances = append(ChairTotalDistances, chairTotalDistance)
+		case <-time.After(2 * time.Second):
+			if len(ChairTotalDistances) == 0 {
+				continue
+			}
+
+			if _, err := db.NamedExecContext(context.Background(), query, ChairTotalDistances); err != nil {
+				slog.Error("failed to update chair_total_distances", err)
+			}
+		}
+	}
+}
+
 func init() {
 	sql.Register("wrapped-mysql", &wrappedDriver{Driver: mysql.MySQLDriver{}})
 }
@@ -104,6 +130,8 @@ func main() {
 	go func() {
 		log.Fatal(http.ListenAndServe(":6060", nil))
 	}()
+
+	go chairTotalDistanceProcess()
 
 	mux := setup()
 	slog.Info("Listening on :8080")
