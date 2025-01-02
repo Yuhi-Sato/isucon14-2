@@ -1012,15 +1012,15 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 	coordinate := Coordinate{Latitude: lat, Longitude: lon}
 
-	tx, err := db.Beginx()
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	defer tx.Rollback()
+	// tx, err := db.Beginx()
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+	// defer tx.Rollback()
 
 	chairs := []Chair{}
-	err = tx.SelectContext(
+	err = db.SelectContext(
 		ctx,
 		&chairs,
 		`SELECT * FROM chairs WHERE is_active = 1`,
@@ -1037,7 +1037,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		// }
 
 		rides := []*Ride{}
-		if err := tx.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
+		if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -1045,7 +1045,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			status, err := getLatestRideStatus(ctx, tx, ride.ID)
+			status, err := getLatestRideStatusWithoutTx(ctx, ride.ID)
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, err)
 				return
@@ -1061,7 +1061,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 		// 最新の位置情報を取得
 		latestChairLocation := &LatestChairLocation{}
-		err = tx.GetContext(
+		err = db.GetContext(
 			ctx,
 			latestChairLocation,
 			`SELECT * FROM latest_chair_locations WHERE chair_id = ?`,
