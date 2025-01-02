@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -1042,9 +1041,9 @@ where ord = 1 and status = "COMPLETED")
 
  SELECT distinct c.*, cl.latitude, cl.longitude
  FROM chairs c
-          INNER JOIN latest_chair_locations cl
+          left JOIN latest_chair_locations cl
                     ON cl.chair_id = c.id
-          left join latest_chair_statuses cs
+          inner join latest_chair_statuses cs
             on cs.chair_id = c.id
  WHERE is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
@@ -1061,13 +1060,8 @@ where ord = 1 and status = "COMPLETED")
 		return
 	}
 
-	log.Println("---start---")
-
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairWithLocations {
-
-		log.Println("chair_id: ", chair.ID)
-
 		// if !chair.IsActive {
 		// 	continue
 		// }
@@ -1105,8 +1099,6 @@ where ord = 1 and status = "COMPLETED")
 			},
 		})
 	}
-
-	log.Println("---end---")
 
 	retrievedAt := time.Now()
 
