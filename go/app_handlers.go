@@ -1034,11 +1034,11 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	query :=
 		`
 	select distinct r.chair_id
-    from (
-        select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by ride_statuses.ride_id ORDER BY ride_statuses.created_at desc) ord
-        from rides left join ride_statuses on rides.id = ride_statuses.ride_id
-    ) as r
-    where ord = 1 and status = "COMPLETED"
+	from (
+			select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
+			from rides left join ride_statuses on rides.id = ride_statuses.ride_id
+		) as r
+	where ord = 1 and status = "COMPLETED"
 	`
 	err = db.SelectContext(ctx, &allowedChairIDs, query)
 	if err != nil {
