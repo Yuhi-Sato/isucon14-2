@@ -1030,41 +1030,30 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	allowedChairIDs := []string{}
-	query :=
-		`
-	select distinct r.chair_id
-	from (
-			select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
-			from rides left join ride_statuses on rides.id = ride_statuses.ride_id
-		) as r
-	where ord = 1 and status = "COMPLETED"
-	`
-	err = db.SelectContext(ctx, &allowedChairIDs, query)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
 	chairWithLocations := []ChairWithLatLon{}
-	query = `
-	SELECT c.*, cl.latitude, cl.longitude
-	FROM chairs c
-	LEFT JOIN latest_chair_locations cl
-	ON cl.chair_id = c.id
-	WHERE c.id IN (?) AND is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+	query := `
+with latest_chair_statuses as (select *
+from (
+         select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
+         from rides left join ride_statuses on rides.id = ride_statuses.ride_id
+     ) as r
+where ord = 1 and status = "COMPLETED")
+
+ SELECT c.*, cl.latitude, cl.longitude
+ FROM chairs c
+          LEFT JOIN latest_chair_locations cl
+                    ON cl.chair_id = c.id
+          left join latest_chair_statuses cs
+            on cs.chair_id = c.id
+ WHERE is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
-	query, args, err := sqlx.In(query, allowedChairIDs, coordinate.Latitude, coordinate.Longitude, distance)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-	query = db.Rebind(query)
 	err = db.SelectContext(
 		ctx,
 		&chairWithLocations,
 		query,
-		args...,
+		coordinate.Latitude,
+		coordinate.Longitude,
+		distance,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
