@@ -1054,7 +1054,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairWithLocations {
 		rides := []*Ride{}
-		if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
+		if err := db.SelectContext(ctx, &rides, `SELECT id FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
 			writeError(w, http.StatusInternalServerError, err)
 			return
 		}
@@ -1062,13 +1062,12 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		skip := false
 		for _, ride := range rides {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-			// status, err := getLatestRideStatusWithoutTx(ctx, ride.ID)
-			status := ""
-			if err := db.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? AND status = 'COMPLETED' ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			id := ""
+			if err := db.GetContext(ctx, &id, `SELECT id FROM ride_statuses WHERE ride_id = ? AND status = 'COMPLETED' ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusInternalServerError, err)
 				return
 			}
-			if status != "COMPLETED" {
+			if id == "" {
 				skip = true
 				break
 			}
