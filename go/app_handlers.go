@@ -1064,14 +1064,14 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
 			// status, err := getLatestRideStatusWithoutTx(ctx, ride.ID)
 			status := ""
-			if err := db.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? AND status = 'COMPLETED' ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil {
+			if err := db.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? AND status = 'COMPLETED' ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil && !errors.Is(err, sql.ErrNoRows) {
 				writeError(w, http.StatusInternalServerError, err)
 				return
 			}
-			// if status != "COMPLETED" {
-			// 	skip = true
-			// 	break
-			// }
+			if status != "COMPLETED" {
+				skip = true
+				break
+			}
 		}
 		if skip {
 			continue
