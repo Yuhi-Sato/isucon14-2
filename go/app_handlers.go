@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -1062,6 +1063,9 @@ where ord = 1 and status = "COMPLETED")
 
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairWithLocations {
+
+		log.Println("chair_id: ", chair.ID)
+
 		// if !chair.IsActive {
 		// 	continue
 		// }
