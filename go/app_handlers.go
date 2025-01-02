@@ -446,6 +446,10 @@ func appPostRides(w http.ResponseWriter, r *http.Request) {
 		Ride:   ride,
 		Status: "MATCHING",
 	})
+	eb.Publish(ride.ChairID.String, RideStatusEventData{
+		Ride:   ride,
+		Status: "MATCHING",
+	})
 
 	writeJSON(w, http.StatusAccepted, &appPostRidesResponse{
 		RideID: rideID,
@@ -651,6 +655,10 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eb.Publish(ride.UserID, RideStatusEventData{
+		Ride:   *ride,
+		Status: "COMPLETED",
+	})
+	eb.Publish(ride.ChairID.String, RideStatusEventData{
 		Ride:   *ride,
 		Status: "COMPLETED",
 	})

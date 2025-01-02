@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -206,6 +207,10 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			Ride:   *ride,
 			Status: newStatus,
 		})
+		eb.Publish(chair.ID, RideStatusEventData{
+			Ride:   *ride,
+			Status: newStatus,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
@@ -291,25 +296,84 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-		Data: &chairGetNotificationResponseData{
-			RideID: ride.ID,
-			User: simpleUser{
-				ID:   user.ID,
-				Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
-			},
-			PickupCoordinate: Coordinate{
-				Latitude:  ride.PickupLatitude,
-				Longitude: ride.PickupLongitude,
-			},
-			DestinationCoordinate: Coordinate{
-				Latitude:  ride.DestinationLatitude,
-				Longitude: ride.DestinationLongitude,
-			},
-			Status: status,
+	data := &chairGetNotificationResponseData{
+		RideID: ride.ID,
+		User: simpleUser{
+			ID:   user.ID,
+			Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
 		},
-		RetryAfterMs: 1000,
-	})
+		PickupCoordinate: Coordinate{
+			Latitude:  ride.PickupLatitude,
+			Longitude: ride.PickupLongitude,
+		},
+		DestinationCoordinate: Coordinate{
+			Latitude:  ride.DestinationLatitude,
+			Longitude: ride.DestinationLongitude,
+		},
+		Status: status}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "data: %s\n", jsonData)
+	flusher.Flush()
+
+	ch := make(chan RideStatusEvent)
+	eb.Subscribe(chair.ID, ch)
+
+	for {
+		select {
+		case re := <-ch:
+			data.Status = re.Data.Status
+
+			jsonData, err := json.Marshal(data)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			fmt.Fprintf(w, "data: %s\n", jsonData)
+			flusher.Flush()
+
+			if re.Data.Status == "COMPLETED" {
+				return
+			}
+		case <-r.Context().Done():
+			return
+		}
+	}
+
+	// writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
+	// 	Data: &chairGetNotificationResponseData{
+	// 		RideID: ride.ID,
+	// 		User: simpleUser{
+	// 			ID:   user.ID,
+	// 			Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
+	// 		},
+	// 		PickupCoordinate: Coordinate{
+	// 			Latitude:  ride.PickupLatitude,
+	// 			Longitude: ride.PickupLongitude,
+	// 		},
+	// 		DestinationCoordinate: Coordinate{
+	// 			Latitude:  ride.DestinationLatitude,
+	// 			Longitude: ride.DestinationLongitude,
+	// 		},
+	// 		Status: status,
+	// 	},
+	// 	RetryAfterMs: 1000,
+	// })
 }
 
 type postChairRidesRideIDStatusRequest struct {
@@ -393,6 +457,10 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 
 	if req.Status == "ENROUTE" || req.Status == "CARRYING" {
 		eb.Publish(ride.UserID, RideStatusEventData{
+			Ride:   *ride,
+			Status: req.Status,
+		})
+		eb.Publish(chair.ID, RideStatusEventData{
 			Ride:   *ride,
 			Status: req.Status,
 		})
