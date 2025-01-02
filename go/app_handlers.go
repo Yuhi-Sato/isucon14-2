@@ -1032,20 +1032,11 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 	chairWithLocations := []ChairWithLatLon{}
 	query := `
-with latest_chair_statuses as (select *
-                               from (
-                                        select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
-                                        from rides left join ride_statuses on rides.id = ride_statuses.ride_id
-                                    ) as r
-                               where ord = 1)
-
-SELECT distinct c.*, cl.latitude, cl.longitude
-FROM chairs c
-         left JOIN latest_chair_locations cl
-                   ON cl.chair_id = c.id
-         left join latest_chair_statuses cs
-                   on cs.chair_id = c.id
-WHERE (cs.status = "COMPLETED" OR cs.status IS NULL) AND is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+		SELECT c.*, cl.latitude, cl.longitude
+		FROM chairs c
+				left JOIN latest_chair_locations cl
+						ON cl.chair_id = c.id
+		WHERE is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
 	err = db.SelectContext(
 		ctx,
@@ -1062,32 +1053,29 @@ WHERE (cs.status = "COMPLETED" OR cs.status IS NULL) AND is_active = 1 AND ABS(c
 
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairWithLocations {
-		// if !chair.IsActive {
-		// 	continue
-		// }
+		rides := []*Ride{}
+		if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
+			writeError(w, http.StatusInternalServerError, err)
+			return
+		}
 
-		// rides := []*Ride{}
-		// if err := db.SelectContext(ctx, &rides, `SELECT * FROM rides WHERE chair_id = ?`, chair.ID); err != nil {
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
-		// skip := false
-		// for _, ride := range rides {
-		// 	// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
-		// 	status, err := getLatestRideStatusWithoutTx(ctx, ride.ID)
-		// 	if err != nil {
-		// 		writeError(w, http.StatusInternalServerError, err)
-		// 		return
-		// 	}
-		// 	if status != "COMPLETED" {
-		// 		skip = true
-		// 		break
-		// 	}
-		// }
-		// if skip {
-		// 	continue
-		// }
+		skip := false
+		for _, ride := range rides {
+			// 過去にライドが存在し、かつ、それが完了していない場合はスキップ
+			// status, err := getLatestRideStatusWithoutTx(ctx, ride.ID)
+			status := ""
+			if err := db.GetContext(ctx, &status, `SELECT status FROM ride_statuses WHERE ride_id = ? AND status = 'COMPLETED' ORDER BY created_at DESC LIMIT 1`, ride.ID); err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+			// if status != "COMPLETED" {
+			// 	skip = true
+			// 	break
+			// }
+		}
+		if skip {
+			continue
+		}
 
 		nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
 			ID:    chair.ID,
