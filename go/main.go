@@ -29,6 +29,7 @@ import (
 var (
 	chairByAccessToken = sync.Map{}
 	db                 *sqlx.DB
+	paymentGatewayURL  string
 )
 
 type wrappedDriver struct {
@@ -228,6 +229,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
+
+	paymentGatewayURL = req.PaymentServer
 
 	chairTotalDistances := []ChairTotalDistance{}
 	query := `SELECT chair_id,
