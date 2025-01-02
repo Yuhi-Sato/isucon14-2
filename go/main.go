@@ -97,7 +97,7 @@ func shortFileName(path string) string {
 	return path
 }
 
-func chairTotalDistanceProcess() {
+func chairTotalDistanceProcess(ctx context.Context) {
 	ChairTotalDistances := []ChairTotalDistance{}
 
 	query := `
@@ -118,6 +118,8 @@ func chairTotalDistanceProcess() {
 			if _, err := db.NamedExecContext(context.Background(), query, ChairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
 			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -130,8 +132,6 @@ func main() {
 	go func() {
 		log.Fatal(http.ListenAndServe(":6060", nil))
 	}()
-
-	go chairTotalDistanceProcess()
 
 	mux := setup()
 	slog.Info("Listening on :8080")
@@ -252,6 +252,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Errorf("failed to initialize: %s: %w", string(out), err))
 		return
 	}
+
+	go chairTotalDistanceProcess(ctx)
 
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
