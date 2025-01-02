@@ -1041,7 +1041,7 @@ where ord = 1 and status = "COMPLETED")
 
  SELECT distinct c.*, cl.latitude, cl.longitude
  FROM chairs c
-          LEFT JOIN latest_chair_locations cl
+          INNER JOIN latest_chair_locations cl
                     ON cl.chair_id = c.id
           left join latest_chair_statuses cs
             on cs.chair_id = c.id
