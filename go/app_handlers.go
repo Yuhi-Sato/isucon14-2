@@ -1045,7 +1045,7 @@ FROM chairs c
                    ON cl.chair_id = c.id
          left join latest_chair_statuses cs
                    on cs.chair_id = c.id
-WHERE cs.status = "COMPLETED" AND is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+WHERE (cs.status = "COMPLETED" OR cs.status IS NULL) AND is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
 	err = db.SelectContext(
 		ctx,
