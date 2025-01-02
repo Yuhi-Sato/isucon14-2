@@ -97,7 +97,7 @@ func shortFileName(path string) string {
 	return path
 }
 
-func chairTotalDistanceProcess(ctx context.Context) {
+func chairTotalDistanceProcess() {
 	ChairTotalDistances := []ChairTotalDistance{}
 
 	query := `
@@ -118,7 +118,7 @@ func chairTotalDistanceProcess(ctx context.Context) {
 			if _, err := db.NamedExecContext(context.Background(), query, ChairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
 			}
-		case <-ctx.Done():
+		case <-time.After(2 * time.Minute):
 			return
 		}
 	}
@@ -253,7 +253,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go chairTotalDistanceProcess(ctx)
+	go chairTotalDistanceProcess()
 
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
