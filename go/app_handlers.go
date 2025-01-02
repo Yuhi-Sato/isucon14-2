@@ -550,16 +550,26 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
-	status, err := getLatestRideStatus(ctx, tx, ride.ID)
-	if err != nil {
+	// status, err := getLatestRideStatus(ctx, tx, ride.ID)
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	id := ""
+	if err := tx.GetContext(ctx, &id, `SELECT id FROM ride_statuses WHERE ride_id = ? AND status = 'ARRIVED' ORDER BY created_at DESC LIMIT 1`, rideID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusBadRequest, errors.New("not arrived yet"))
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
-	if status != "ARRIVED" {
-		writeError(w, http.StatusBadRequest, errors.New("not arrived yet"))
-		return
-	}
+	// if status != "ARRIVED" {
+	// 	writeError(w, http.StatusBadRequest, errors.New("not arrived yet"))
+	// 	return
+	// }
 
 	result, err := tx.ExecContext(
 		ctx,
@@ -614,11 +624,11 @@ func appPostRideEvaluatation(w http.ResponseWriter, r *http.Request) {
 		Amount: fare,
 	}
 
-	var paymentGatewayURL string
-	if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
+	// var paymentGatewayURL string
+	// if err := tx.GetContext(ctx, &paymentGatewayURL, "SELECT value FROM settings WHERE name = 'payment_gateway_url'"); err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
 
 	if err := requestPaymentGatewayPostPayment(ctx, paymentGatewayURL, paymentToken.Token, paymentGatewayRequest, func() ([]Ride, error) {
 		rides := []Ride{}
