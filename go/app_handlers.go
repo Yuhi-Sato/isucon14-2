@@ -1064,8 +1064,11 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		err = db.GetContext(
 			ctx,
 			latestChairLocation,
-			`SELECT * FROM latest_chair_locations WHERE chair_id = ?`,
+			`SELECT * FROM latest_chair_locations WHERE chair_id = ? AND ABS(latitude - ?) + ABS(longitude - ?) <= ?`,
 			chair.ID,
+			coordinate.Latitude,
+			coordinate.Longitude,
+			distance,
 		)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -1075,17 +1078,15 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if calculateDistance(coordinate.Latitude, coordinate.Longitude, latestChairLocation.Latitude, latestChairLocation.Longitude) <= distance {
-			nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
-				ID:    chair.ID,
-				Name:  chair.Name,
-				Model: chair.Model,
-				CurrentCoordinate: Coordinate{
-					Latitude:  latestChairLocation.Latitude,
-					Longitude: latestChairLocation.Longitude,
-				},
-			})
-		}
+		nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
+			ID:    chair.ID,
+			Name:  chair.Name,
+			Model: chair.Model,
+			CurrentCoordinate: Coordinate{
+				Latitude:  latestChairLocation.Latitude,
+				Longitude: latestChairLocation.Longitude,
+			},
+		})
 	}
 
 	retrievedAt := time.Now()
