@@ -1039,7 +1039,7 @@ from (
      ) as r
 where ord = 1 and status = "COMPLETED")
 
- SELECT c.*, cl.latitude, cl.longitude
+ SELECT distinct c.*, cl.latitude, cl.longitude
  FROM chairs c
           LEFT JOIN latest_chair_locations cl
                     ON cl.chair_id = c.id
