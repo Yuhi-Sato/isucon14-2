@@ -1061,6 +1061,8 @@ where ord = 1 and status = "COMPLETED")
 		return
 	}
 
+	log.Println("---start---")
+
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
 	for _, chair := range chairWithLocations {
 
@@ -1103,6 +1105,8 @@ where ord = 1 and status = "COMPLETED")
 			},
 		})
 	}
+
+	log.Println("---end---")
 
 	retrievedAt := time.Now()
 
