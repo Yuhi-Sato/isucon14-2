@@ -1019,11 +1019,32 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	// }
 	// defer tx.Rollback()
 
-	chairs := []Chair{}
+	// chairs := []Chair{}
+	// err = db.SelectContext(
+	// 	ctx,
+	// 	&chairs,
+	// 	`SELECT * FROM chairs LEFT JOIN latest WHERE is_active = 1`,
+	// )
+	// if err != nil {
+	// 	writeError(w, http.StatusInternalServerError, err)
+	// 	return
+	// }
+
+	chairWithLocations := []ChairWithLatLon{}
+	query := `
+	select c.*, cl.latitude, cl.longitude
+	from chairs c
+	left join latest_chair_locations cl
+	ON cl.chair_id = c.id
+	where is_active = 1 and ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+	`
 	err = db.SelectContext(
 		ctx,
-		&chairs,
-		`SELECT * FROM chairs WHERE is_active = 1`,
+		&chairWithLocations,
+		query,
+		coordinate.Latitude,
+		coordinate.Longitude,
+		distance,
 	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -1031,7 +1052,7 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	nearbyChairs := []appGetNearbyChairsResponseChair{}
-	for _, chair := range chairs {
+	for _, chair := range chairWithLocations {
 		// if !chair.IsActive {
 		// 	continue
 		// }
@@ -1060,31 +1081,31 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 最新の位置情報を取得
-		latestChairLocation := &LatestChairLocation{}
-		err = db.GetContext(
-			ctx,
-			latestChairLocation,
-			`SELECT * FROM latest_chair_locations WHERE chair_id = ? AND ABS(latitude - ?) + ABS(longitude - ?) <= ?`,
-			chair.ID,
-			coordinate.Latitude,
-			coordinate.Longitude,
-			distance,
-		)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				continue
-			}
-			writeError(w, http.StatusInternalServerError, err)
-			return
-		}
+		// latestChairLocation := &LatestChairLocation{}
+		// err = db.GetContext(
+		// 	ctx,
+		// 	latestChairLocation,
+		// 	`SELECT * FROM latest_chair_locations WHERE chair_id = ? AND ABS(latitude - ?) + ABS(longitude - ?) <= ?`,
+		// 	chair.ID,
+		// 	coordinate.Latitude,
+		// 	coordinate.Longitude,
+		// 	distance,
+		// )
+		// if err != nil {
+		// 	if errors.Is(err, sql.ErrNoRows) {
+		// 		continue
+		// 	}
+		// 	writeError(w, http.StatusInternalServerError, err)
+		// 	return
+		// }
 
 		nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
 			ID:    chair.ID,
 			Name:  chair.Name,
 			Model: chair.Model,
 			CurrentCoordinate: Coordinate{
-				Latitude:  latestChairLocation.Latitude,
-				Longitude: latestChairLocation.Longitude,
+				Latitude:  chair.Latitude,
+				Longitude: chair.Longitude,
 			},
 		})
 	}
