@@ -1032,11 +1032,22 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 
 	chairWithLocations := []ChairWithLatLon{}
 	query := `
-	select c.*, cl.latitude, cl.longitude
-	from chairs c
-	left join latest_chair_locations cl
-	ON cl.chair_id = c.id
-	where is_active = 1 and ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+with latest_ride_statuses as (
+    select *
+    from (
+        select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by ride_statuses.ride_id ORDER BY ride_statuses.created_at desc) ord
+        from rides left join ride_statuses on rides.id = ride_statuses.ride_id
+    ) as r
+    where ord = 1 and status = "COMPLETED"
+)
+
+SELECT c.*, cl.latitude, cl.longitude
+FROM chairs c
+         LEFT JOIN latest_chair_locations cl
+                   ON cl.chair_id = c.id
+        inner join latest_ride_statuses rs
+        on rs.chair_id = c.id
+WHERE is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
 	err = db.SelectContext(
 		ctx,
@@ -1080,25 +1091,6 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// 最新の位置情報を取得
-		// latestChairLocation := &LatestChairLocation{}
-		// err = db.GetContext(
-		// 	ctx,
-		// 	latestChairLocation,
-		// 	`SELECT * FROM latest_chair_locations WHERE chair_id = ? AND ABS(latitude - ?) + ABS(longitude - ?) <= ?`,
-		// 	chair.ID,
-		// 	coordinate.Latitude,
-		// 	coordinate.Longitude,
-		// 	distance,
-		// )
-		// if err != nil {
-		// 	if errors.Is(err, sql.ErrNoRows) {
-		// 		continue
-		// 	}
-		// 	writeError(w, http.StatusInternalServerError, err)
-		// 	return
-		// }
-
 		nearbyChairs = append(nearbyChairs, appGetNearbyChairsResponseChair{
 			ID:    chair.ID,
 			Name:  chair.Name,
@@ -1111,15 +1103,6 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	retrievedAt := time.Now()
-	// err = tx.GetContext(
-	// 	ctx,
-	// 	retrievedAt,
-	// 	`SELECT CURRENT_TIMESTAMP(6)`,
-	// )
-	// if err != nil {
-	// 	writeError(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
 
 	writeJSON(w, http.StatusOK, &appGetNearbyChairsResponse{
 		Chairs:      nearbyChairs,
