@@ -331,7 +331,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "data: %s\n", jsonData)
 	flusher.Flush()
 
-	ch := make(chan RideStatusEvent)
+	ch := make(chan RideStatusEvent, 100)
 	eb.Subscribe(chair.ID, ch)
 
 	for {
