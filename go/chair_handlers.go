@@ -209,6 +209,7 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		})
 		eb.Publish(chair.ID, RideStatusEventData{
 			Ride:   *ride,
+			UserID: ride.UserID,
 			Status: newStatus,
 		})
 	}
@@ -337,6 +338,19 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case re := <-ch:
+			data.RideID = re.Data.Ride.ID
+			data.User.ID = re.Data.Ride.UserID
+			user := &User{}
+			err = tx.GetContext(ctx, user, "SELECT * FROM users WHERE id = ? FOR SHARE", re.Data.UserID)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, err)
+				return
+			}
+			data.User.Name = fmt.Sprintf("%s %s", user.Firstname, user.Lastname)
+			data.PickupCoordinate.Latitude = re.Data.Ride.PickupLatitude
+			data.PickupCoordinate.Longitude = re.Data.Ride.PickupLongitude
+			data.DestinationCoordinate.Latitude = re.Data.Ride.DestinationLatitude
+			data.DestinationCoordinate.Longitude = re.Data.Ride.DestinationLongitude
 			data.Status = re.Data.Status
 
 			jsonData, err := json.Marshal(data)
@@ -463,6 +477,7 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 		})
 		eb.Publish(chair.ID, RideStatusEventData{
 			Ride:   *ride,
+			UserID: ride.UserID,
 			Status: req.Status,
 		})
 	}

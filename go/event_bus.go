@@ -6,6 +6,7 @@ import (
 
 type RideStatusEventData struct {
 	Ride   Ride
+	UserID string
 	Status string
 }
 
