@@ -1033,19 +1033,19 @@ func appGetNearbyChairs(w http.ResponseWriter, r *http.Request) {
 	chairWithLocations := []ChairWithLatLon{}
 	query := `
 with latest_chair_statuses as (select *
-from (
-         select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
-         from rides left join ride_statuses on rides.id = ride_statuses.ride_id
-     ) as r
-where ord = 1 and status = "COMPLETED")
+                               from (
+                                        select rides.*, ride_statuses.status, ROW_NUMBER() over (partition by rides.chair_id ORDER BY ride_statuses.created_at desc) ord
+                                        from rides left join ride_statuses on rides.id = ride_statuses.ride_id
+                                    ) as r
+                               where ord = 1)
 
- SELECT distinct c.*, cl.latitude, cl.longitude
- FROM chairs c
-          left JOIN latest_chair_locations cl
-                    ON cl.chair_id = c.id
-          inner join latest_chair_statuses cs
-            on cs.chair_id = c.id
- WHERE is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
+SELECT distinct c.*, cl.latitude, cl.longitude
+FROM chairs c
+         left JOIN latest_chair_locations cl
+                   ON cl.chair_id = c.id
+         left join latest_chair_statuses cs
+                   on cs.chair_id = c.id
+WHERE cs.status = "COMPLETED" AND is_active = 1 AND ABS(cl.latitude - ?) + ABS(cl.longitude - ?) <= ?
 	`
 	err = db.SelectContext(
 		ctx,
