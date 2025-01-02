@@ -348,6 +348,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			flusher.Flush()
 
 			if re.Data.Status == "COMPLETED" {
+				eb.Unsubscribe(chair.ID)
 				return
 			}
 		case <-r.Context().Done():

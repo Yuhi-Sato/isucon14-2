@@ -34,6 +34,12 @@ func (eb *EventBus) Subscribe(topic string, ch RideStatusChannel) {
 	eb.rm.Unlock()
 }
 
+func (eb *EventBus) Unsubscribe(topic string) {
+	eb.rm.Lock()
+	delete(eb.subscribers, topic)
+	eb.rm.Unlock()
+}
+
 func (eb *EventBus) Publish(topic string, data RideStatusEventData) {
 	eb.rm.RLock()
 	if chans, found := eb.subscribers[topic]; found {
