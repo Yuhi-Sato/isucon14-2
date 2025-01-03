@@ -103,7 +103,7 @@ type Destination struct {
 }
 
 func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
-	var fastestChairID string
+	fastestChairID := chairs[0].ID
 	var fastestTime float64
 
 	for _, chair := range chairs {
