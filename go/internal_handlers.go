@@ -83,7 +83,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	matchedID := selectFastestChair(chairs, &Pickup{Latitude: ride.PickupLatitude, Longitude: ride.PickupLongitude}, &Destination{Latitude: ride.DestinationLatitude, Longitude: ride.DestinationLongitude})
+	matchedID := selectOptimizedChair(chairs, &Pickup{Latitude: ride.PickupLatitude, Longitude: ride.PickupLongitude}, &Destination{Latitude: ride.DestinationLatitude, Longitude: ride.DestinationLongitude})
 
 	if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matchedID, ride.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
@@ -103,12 +103,18 @@ type Destination struct {
 	Longitude int `json:"longitude"`
 }
 
-func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
+func selectOptimizedChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
 	fastestChairID := chairs[0].ID
 	var fastestTime float64
 
 	for _, chair := range chairs {
-		time := calculateTimeToPickupRide(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup, destination)
+		// time := calculateTimeToPickupRide(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup, destination)
+		// if fastestTime == 0 || time < fastestTime {
+		// 	fastestTime = time
+		// 	fastestChairID = chair.ID
+		// }
+
+		time := calculateTimeToPickup(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup)
 		if fastestTime == 0 || time < fastestTime {
 			fastestTime = time
 			fastestChairID = chair.ID
@@ -118,9 +124,14 @@ func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destinat
 	return fastestChairID
 }
 
-func calculateTimeToPickupRide(chairLatitude int, chairLongitude int, speed int, pickup *Pickup, destination *Destination) float64 {
-	timeToPickup := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
-	timeToDestination := float64(calculateDistance(pickup.Latitude, pickup.Longitude, destination.Latitude, destination.Longitude)) / float64(speed)
-
-	return timeToPickup + timeToDestination
+func calculateTimeToPickup(chairLatitude int, chairLongitude int, speed int, pickup *Pickup) float64 {
+	time := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
+	return time
 }
+
+// func calculateTimeToPickupRide(chairLatitude int, chairLongitude int, speed int, pickup *Pickup, destination *Destination) float64 {
+// 	timeToPickup := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
+// 	timeToDestination := float64(calculateDistance(pickup.Latitude, pickup.Longitude, destination.Latitude, destination.Longitude)) / float64(speed)
+
+// 	return timeToPickup + timeToDestination
+// }
