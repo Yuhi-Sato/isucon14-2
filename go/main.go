@@ -253,8 +253,6 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go chairTotalDistanceProcess()
-
 	if _, err := db.ExecContext(ctx, "UPDATE settings SET value = ? WHERE name = 'payment_gateway_url'", req.PaymentServer); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
@@ -292,6 +290,8 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	for _, chair := range chairs {
 		chairByAccessToken.Store(chair.AccessToken, chair)
 	}
+
+	go chairTotalDistanceProcess()
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
