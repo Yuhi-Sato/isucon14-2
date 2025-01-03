@@ -22,32 +22,32 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 
 	chairs := []*ChairWithLatLonModel{}
 	query := `
-WITH latest_rides AS (
-    SELECT *
-    FROM (
-             SELECT *, ROW_NUMBER() OVER (PARTITION BY chair_id order by created_at desc) as rn
-             FROM rides
-         ) tmp
-    WHERE rn = 1
-)
+		WITH latest_rides AS (
+			SELECT *
+			FROM (
+					SELECT *, ROW_NUMBER() OVER (PARTITION BY chair_id order by created_at desc) as rn
+					FROM rides
+				) tmp
+			WHERE rn = 1
+		)
 
-   -- ライドごとの最新の状態
-   , latest_ride_statuses AS (
-    SELECT *
-    FROM (
-             SELECT *, ROW_NUMBER() OVER (PARTITION BY ride_id order by created_at desc) as rn
-             FROM ride_statuses
-         ) tmp
-    WHERE rn = 1
-)
+		-- ライドごとの最新の状態
+		, latest_ride_statuses AS (
+			SELECT *
+			FROM (
+					SELECT *, ROW_NUMBER() OVER (PARTITION BY ride_id order by created_at desc) as rn
+					FROM ride_statuses
+				) tmp
+			WHERE rn = 1
+		)
 
--- 状態がCOMPETEDの椅子を適当に一つ取得
-SELECT chairs.id as id, chairs.model as model, latest_chair_locations.latitude as latitude, latest_chair_locations.longitude as longitude
-FROM chairs
-         LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
-         LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
-         LEFT JOIN latest_chair_locations ON chairs.id = latest_chair_locations.chair_id
-WHERE latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL
+		-- 状態がCOMPETEDの椅子を適当に一つ取得
+		SELECT chairs.id as id, chairs.model as model, latest_chair_locations.latitude as latitude, latest_chair_locations.longitude as longitude
+		FROM chairs
+				LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
+				LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
+				LEFT JOIN latest_chair_locations ON chairs.id = latest_chair_locations.chair_id
+		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
 	`
 
 	if err := db.SelectContext(ctx, &chairs, query); err != nil {
