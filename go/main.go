@@ -98,24 +98,24 @@ func shortFileName(path string) string {
 }
 
 func chairTotalDistanceProcess() {
-	ChairTotalDistances := []ChairTotalDistance{}
+	chairTotalDistances := []ChairTotalDistance{}
 
 	query := `
-		INSERT INTO chair_total_distances (chair_id, total_distance)
-		 VALUES (:chair_id, :total_distance)
+		INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at)
+		 VALUES (:chair_id, :total_distance, :total_distance_updated_at)
 		 ON DUPLICATE KEY UPDATE total_distance = total_distance + :total_distance
 	`
 
 	for {
 		select {
 		case chairTotalDistance := <-chairTotalDistanceCh:
-			ChairTotalDistances = append(ChairTotalDistances, chairTotalDistance)
+			chairTotalDistances = append(chairTotalDistances, chairTotalDistance)
 		case <-time.After(2 * time.Second):
-			if len(ChairTotalDistances) == 0 {
+			if len(chairTotalDistances) == 0 {
 				continue
 			}
 
-			if _, err := db.NamedExec(query, ChairTotalDistances); err != nil {
+			if _, err := db.NamedExec(query, chairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
 			}
 		case <-time.After(2 * time.Minute):
