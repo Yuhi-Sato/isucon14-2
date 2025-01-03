@@ -119,7 +119,7 @@ func chairTotalDistanceProcess() {
 				slog.Error("failed to update chair_total_distances", err)
 			}
 		case <-time.After(2 * time.Minute):
-			return
+			break
 		}
 	}
 }
