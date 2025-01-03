@@ -108,30 +108,30 @@ func selectOptimizedChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destin
 	var fastestTime float64
 
 	for _, chair := range chairs {
-		// time := calculateTimeToPickupRide(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup, destination)
-		// if fastestTime == 0 || time < fastestTime {
-		// 	fastestTime = time
-		// 	fastestChairID = chair.ID
-		// }
-
-		time := calculateTimeToPickup(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup)
+		time := calculateTimeToPickupRide(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup, destination)
 		if fastestTime == 0 || time < fastestTime {
 			fastestTime = time
 			fastestChairID = chair.ID
 		}
+
+		// time := calculateTimeToPickup(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup)
+		// if fastestTime == 0 || time < fastestTime {
+		// 	fastestTime = time
+		// 	fastestChairID = chair.ID
+		// }
 	}
 
 	return fastestChairID
 }
 
-func calculateTimeToPickup(chairLatitude int, chairLongitude int, speed int, pickup *Pickup) float64 {
-	time := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
-	return time
-}
-
-// func calculateTimeToPickupRide(chairLatitude int, chairLongitude int, speed int, pickup *Pickup, destination *Destination) float64 {
-// 	timeToPickup := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
-// 	timeToDestination := float64(calculateDistance(pickup.Latitude, pickup.Longitude, destination.Latitude, destination.Longitude)) / float64(speed)
-
-// 	return timeToPickup + timeToDestination
+// func calculateTimeToPickup(chairLatitude int, chairLongitude int, speed int, pickup *Pickup) float64 {
+// 	time := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
+// 	return time
 // }
+
+func calculateTimeToPickupRide(chairLatitude int, chairLongitude int, speed int, pickup *Pickup, destination *Destination) float64 {
+	timeToPickup := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
+	timeToDestination := float64(calculateDistance(pickup.Latitude, pickup.Longitude, destination.Latitude, destination.Longitude)) / float64(speed)
+
+	return timeToPickup + timeToDestination
+}
