@@ -20,7 +20,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	matched := &Chair{}
+	chairs := []*ChairWithLatLonModel{}
 	query := `
 		WITH latest_rides AS (
 			SELECT *
@@ -42,15 +42,15 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		)
 
 		-- 状態がCOMPETEDの椅子を適当に一つ取得
-		SELECT chairs.*
+		SELECT chairs.id as id, chairs.model as model, latest_chair_locations.latitude as latitude, latest_chair_locations.longitude as longitude
 		FROM chairs
 				LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
 				LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
+				LEFT JOIN latest_chair_locations ON chairs.id = latest_chair_locations.chair_id
 		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
-		LIMIT 1
 	`
 
-	if err := db.GetContext(ctx, matched, query); err != nil {
+	if err := db.GetContext(ctx, chairs, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -82,10 +82,44 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matched.ID, ride.ID); err != nil {
+	matchedID := selectFastestChair(chairs, &Pickup{Latitude: ride.PickupLatitude, Longitude: ride.PickupLongitude}, &Destination{Latitude: ride.DestinationLatitude, Longitude: ride.DestinationLongitude})
+
+	if _, err := db.ExecContext(ctx, "UPDATE rides SET chair_id = ? WHERE id = ?", matchedID, ride.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type Pickup struct {
+	Latitude  int `json:"latitude"`
+	Longitude int `json:"longitude"`
+}
+
+type Destination struct {
+	Latitude  int `json:"latitude"`
+	Longitude int `json:"longitude"`
+}
+
+func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
+	var fastestChairID string
+	var fastestTime float64
+
+	for _, chair := range chairs {
+		time := calculateTimeToPickupRide(chair.Latitude, chair.Longitude, chairModelByModel[chair.Model].Speed, pickup, destination)
+		if fastestTime == 0 || time < fastestTime {
+			fastestTime = time
+			fastestChairID = chair.ID
+		}
+	}
+
+	return fastestChairID
+}
+
+func calculateTimeToPickupRide(chairLatitude int, chairLongitude int, speed int, pickup *Pickup, destination *Destination) float64 {
+	timeToPickup := float64(calculateDistance(chairLatitude, chairLongitude, pickup.Latitude, pickup.Longitude)) / float64(speed)
+	timeToDestination := float64(calculateDistance(pickup.Latitude, pickup.Longitude, destination.Latitude, destination.Longitude)) / float64(speed)
+
+	return timeToPickup + timeToDestination
 }

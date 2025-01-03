@@ -31,6 +31,7 @@ var (
 	db                   *sqlx.DB
 	paymentGatewayURL    string
 	chairTotalDistanceCh = make(chan ChairTotalDistance, 1000)
+	chairModelByModel    = map[string]ChairModel{}
 )
 
 type wrappedDriver struct {
@@ -291,6 +292,15 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, chair := range chairs {
 		chairByAccessToken.Store(chair.AccessToken, chair)
+	}
+
+	chairModel := []ChairModel{}
+	if err := db.SelectContext(ctx, &chairModel, "SELECT * FROM chair_models"); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+	for _, model := range chairModel {
+		chairModelByModel[model.Name] = model
 	}
 
 	go chairTotalDistanceProcess(ctx)
