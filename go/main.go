@@ -103,7 +103,7 @@ func chairTotalDistanceProcess() {
 	query := `
 		INSERT INTO chair_total_distances (chair_id, total_distance, total_distance_updated_at)
 		 VALUES (:chair_id, :total_distance, :total_distance_updated_at)
-		 ON DUPLICATE KEY UPDATE total_distance = total_distance + :total_distance
+		 ON DUPLICATE KEY UPDATE total_distance = total_distance + :total_distance, total_distance_updated_at = :total_distance_updated_at
 	`
 
 	for {
@@ -118,6 +118,8 @@ func chairTotalDistanceProcess() {
 			if _, err := db.NamedExec(query, chairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
 			}
+
+			chairTotalDistances = []ChairTotalDistance{}
 		case <-time.After(2 * time.Minute):
 			break
 		}
