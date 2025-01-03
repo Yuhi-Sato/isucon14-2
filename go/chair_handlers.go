@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -301,13 +300,24 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := &chairGetNotificationResponseData{
-		RideID: ride.ID,
-		User: simpleUser{
-			ID:   user.ID,
-			Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
+	writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
+		Data: &chairGetNotificationResponseData{
+			RideID: ride.ID,
+			User: simpleUser{
+				ID:   user.ID,
+				Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
+			},
+			PickupCoordinate: Coordinate{
+				Latitude:  ride.PickupLatitude,
+				Longitude: ride.PickupLongitude,
+			},
+			DestinationCoordinate: Coordinate{
+				Latitude:  ride.DestinationLatitude,
+				Longitude: ride.DestinationLongitude,
+			},
+			Status: status,
 		},
-		RetryAfterMs: 2000,
+		RetryAfterMs: 1000,
 	})
 }
 
