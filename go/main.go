@@ -117,8 +117,6 @@ func chairTotalDistanceProcess(ctx context.Context) {
 
 			if _, err := db.NamedExecContext(ctx, query, chairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
-				slog.Error("chairTotalDistances", chairTotalDistances)
-				slog.Error("len: ", len(chairTotalDistances))
 			}
 
 			chairTotalDistances = []ChairTotalDistance{}
