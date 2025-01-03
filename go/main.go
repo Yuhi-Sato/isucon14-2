@@ -291,7 +291,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		chairByAccessToken.Store(chair.AccessToken, chair)
 	}
 
-	// go chairTotalDistanceProcess()
+	go chairTotalDistanceProcess()
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
