@@ -111,7 +111,7 @@ func chairTotalDistanceProcess(ctx context.Context) {
 		select {
 		case chairTotalDistance := <-chairTotalDistanceCh:
 			chairTotalDistances = append(chairTotalDistances, chairTotalDistance)
-		case <-time.After(500 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			if len(chairTotalDistances) == 0 {
 				continue
 			}
