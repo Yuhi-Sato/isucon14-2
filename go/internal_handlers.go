@@ -50,7 +50,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
 	`
 
-	if err := db.GetContext(ctx, chairs, query); err != nil {
+	if err := db.SelectContext(ctx, &chairs, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
