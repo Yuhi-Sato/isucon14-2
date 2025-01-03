@@ -141,10 +141,10 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 	}
 
-	chairTotalDistanceCh <- ChairTotalDistance{
-		ChairID:       chair.ID,
-		TotalDistance: distance,
-	}
+	// chairTotalDistanceCh <- ChairTotalDistance{
+	// 	ChairID:       chair.ID,
+	// 	TotalDistance: distance,
+	// }
 
 	if _, err := db.ExecContext(
 		ctx,
@@ -153,12 +153,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		 ON DUPLICATE KEY UPDATE total_distance = total_distance + VALUES(total_distance)`,
 		chair.ID, distance,
 	); err != nil {
-		writeError(w, http.StatusInternalServerError, err)
-		return
-	}
-
-	location := &ChairLocation{}
-	if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
