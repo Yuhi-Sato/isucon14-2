@@ -51,11 +51,12 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	`
 
 	if err := db.SelectContext(ctx, &chairs, query); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
 		writeError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	if len(chairs) == 0 {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
