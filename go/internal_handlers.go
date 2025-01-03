@@ -42,7 +42,7 @@ WITH latest_rides AS (
 )
 
 -- 状態がCOMPETEDの椅子を適当に一つ取得
-SELECT *
+SELECT chairs.id as id, chairs.model as model, latest_chair_locations.latitude as latitude, latest_chair_locations.longitude as longitude
 FROM chairs
          LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
          LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
