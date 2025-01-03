@@ -210,11 +210,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			Ride:   *ride,
 			Status: newStatus,
 		})
-		eb.Publish(chair.ID, RideStatusEventData{
-			Ride:   *ride,
-			UserID: ride.UserID,
-			Status: newStatus,
-		})
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
@@ -403,11 +398,6 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	if req.Status == "ENROUTE" || req.Status == "CARRYING" {
 		eb.Publish(ride.UserID, RideStatusEventData{
 			Ride:   *ride,
-			Status: req.Status,
-		})
-		eb.Publish(chair.ID, RideStatusEventData{
-			Ride:   *ride,
-			UserID: ride.UserID,
 			Status: req.Status,
 		})
 	}

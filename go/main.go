@@ -115,7 +115,7 @@ func chairTotalDistanceProcess() {
 				continue
 			}
 
-			if _, err := db.NamedExecContext(context.Background(), query, ChairTotalDistances); err != nil {
+			if _, err := db.NamedExec(query, ChairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
 			}
 		case <-time.After(2 * time.Minute):
