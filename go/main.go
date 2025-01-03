@@ -97,7 +97,7 @@ func shortFileName(path string) string {
 	return path
 }
 
-func chairTotalDistanceProcess() {
+func chairTotalDistanceProcess(ctx context.Context) {
 	chairTotalDistances := []ChairTotalDistance{}
 
 	query := `
@@ -115,8 +115,10 @@ func chairTotalDistanceProcess() {
 				continue
 			}
 
-			if _, err := db.NamedExec(query, chairTotalDistances); err != nil {
+			if _, err := db.NamedExecContext(ctx, query, chairTotalDistances); err != nil {
 				slog.Error("failed to update chair_total_distances", err)
+				slog.Error("chairTotalDistances", chairTotalDistances)
+				slog.Error("len: ", len(chairTotalDistances))
 			}
 
 			chairTotalDistances = []ChairTotalDistance{}
@@ -293,7 +295,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		chairByAccessToken.Store(chair.AccessToken, chair)
 	}
 
-	go chairTotalDistanceProcess()
+	go chairTotalDistanceProcess(ctx)
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
