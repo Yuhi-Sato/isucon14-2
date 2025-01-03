@@ -46,7 +46,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		FROM chairs
 				LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
 				LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
-		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_ride_statuses.status IS NULL) AND is_active
+		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
 		LIMIT 1
 	`
 
