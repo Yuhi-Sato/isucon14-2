@@ -20,7 +20,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chairs := []ChairWithLatLonModel{}
+	chairs := []*ChairWithLatLonModel{}
 	query := `
 		WITH latest_rides AS (
 			SELECT *
@@ -50,7 +50,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
 	`
 
-	if err := db.GetContext(ctx, &chairs, query); err != nil {
+	if err := db.GetContext(ctx, chairs, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -102,7 +102,7 @@ type Destination struct {
 	Longitude int `json:"longitude"`
 }
 
-func selectFastestChair(chairs []ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
+func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destination *Destination) string {
 	var fastestChairID string
 	var fastestTime float64
 
