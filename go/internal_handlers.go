@@ -46,7 +46,7 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 		FROM chairs
 				LEFT JOIN latest_rides ON chairs.id = latest_rides.chair_id
 				LEFT JOIN latest_ride_statuses ON latest_rides.id = latest_ride_statuses.ride_id
-				INNER JOIN latest_chair_locations ON chairs.id = latest_chair_locations.chair_id
+				LEFT JOIN latest_chair_locations ON chairs.id = latest_chair_locations.chair_id
 		WHERE (latest_ride_statuses.status = 'COMPLETED' OR latest_rides.id IS NULL) AND is_active
 	`
 
@@ -108,7 +108,7 @@ func selectFastestChair(chairs []*ChairWithLatLonModel, pickup *Pickup, destinat
 	var fastestTime float64
 
 	for _, chair := range chairs {
-		time := calculateTimeToPickupRide(chair.Latitude, chair.Longitude, chairModelByModel[chair.Model].Speed, pickup, destination)
+		time := calculateTimeToPickupRide(int(chair.Latitude.Int64), int(chair.Longitude.Int64), chairModelByModel[chair.Model].Speed, pickup, destination)
 		if fastestTime == 0 || time < fastestTime {
 			fastestTime = time
 			fastestChairID = chair.ID

@@ -30,10 +30,10 @@ type ChairLocation struct {
 }
 
 type ChairWithLatLonModel struct {
-	ID        string `db:"id"`
-	Latitude  int    `db:"latitude"`
-	Longitude int    `db:"longitude"`
-	Model     string `db:"model"`
+	ID        string        `db:"id"`
+	Latitude  sql.NullInt64 `db:"latitude"`
+	Longitude sql.NullInt64 `db:"longitude"`
+	Model     string        `db:"model"`
 }
 
 type ChairWithLatLon struct {
