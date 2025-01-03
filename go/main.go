@@ -303,7 +303,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		chairModelByModel[model.Name] = model
 	}
 
-	// go chairTotalDistanceProcess(ctx)
+	go chairTotalDistanceProcess(ctx)
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }

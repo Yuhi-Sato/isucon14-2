@@ -141,10 +141,10 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 	}
 
-	// chairTotalDistanceCh <- ChairTotalDistance{
-	// 	ChairID:       chair.ID,
-	// 	TotalDistance: distance,
-	// }
+	chairTotalDistanceCh <- ChairTotalDistance{
+		ChairID:       chair.ID,
+		TotalDistance: distance,
+	}
 
 	if _, err := db.ExecContext(
 		ctx,
