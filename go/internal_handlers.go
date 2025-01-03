@@ -51,6 +51,10 @@ func internalGetMatching(w http.ResponseWriter, r *http.Request) {
 	`
 
 	if err := db.GetContext(ctx, matched, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		writeError(w, http.StatusInternalServerError, err)
 		return
 	}
