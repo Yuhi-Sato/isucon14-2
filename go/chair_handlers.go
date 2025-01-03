@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -206,6 +207,11 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			Ride:   *ride,
 			Status: newStatus,
 		})
+		eb.Publish(chair.ID, RideStatusEventData{
+			Ride:   *ride,
+			UserID: ride.UserID,
+			Status: newStatus,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
@@ -248,7 +254,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 2000,
+				RetryAfterMs: 1000,
 			})
 			return
 		}
@@ -291,22 +297,11 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-		Data: &chairGetNotificationResponseData{
-			RideID: ride.ID,
-			User: simpleUser{
-				ID:   user.ID,
-				Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
-			},
-			PickupCoordinate: Coordinate{
-				Latitude:  ride.PickupLatitude,
-				Longitude: ride.PickupLongitude,
-			},
-			DestinationCoordinate: Coordinate{
-				Latitude:  ride.DestinationLatitude,
-				Longitude: ride.DestinationLongitude,
-			},
-			Status: status,
+	data := &chairGetNotificationResponseData{
+		RideID: ride.ID,
+		User: simpleUser{
+			ID:   user.ID,
+			Name: fmt.Sprintf("%s %s", user.Firstname, user.Lastname),
 		},
 		RetryAfterMs: 2000,
 	})
@@ -394,6 +389,11 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	if req.Status == "ENROUTE" || req.Status == "CARRYING" {
 		eb.Publish(ride.UserID, RideStatusEventData{
 			Ride:   *ride,
+			Status: req.Status,
+		})
+		eb.Publish(chair.ID, RideStatusEventData{
+			Ride:   *ride,
+			UserID: ride.UserID,
 			Status: req.Status,
 		})
 	}

@@ -6,6 +6,7 @@ import (
 
 type RideStatusEventData struct {
 	Ride   Ride
+	UserID string
 	Status string
 }
 
@@ -31,6 +32,12 @@ func (eb *EventBus) Subscribe(topic string, ch RideStatusChannel) {
 	} else {
 		eb.subscribers[topic] = append([]RideStatusChannel{}, ch)
 	}
+	eb.rm.Unlock()
+}
+
+func (eb *EventBus) Unsubscribe(topic string) {
+	eb.rm.Lock()
+	delete(eb.subscribers, topic)
 	eb.rm.Unlock()
 }
 
