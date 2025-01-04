@@ -146,6 +146,9 @@ func setup() http.Handler {
 	if host == "" {
 		host = "127.0.0.1"
 	}
+
+	log.Println("host", host)
+
 	port := os.Getenv("ISUCON_DB_PORT")
 	if port == "" {
 		port = "3306"
