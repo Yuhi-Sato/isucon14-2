@@ -87,8 +87,6 @@ func chairPostActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chairByAccessToken.Delete(chair.AccessToken)
-
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -143,27 +141,21 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 		distance = calculateDistance(latestChairLocation.Latitude, latestChairLocation.Longitude, req.Latitude, req.Longitude)
 	}
 
-	chairTotalDistanceCh <- ChairTotalDistance{
-		ChairID:       chair.ID,
-		TotalDistance: distance,
+	// chairTotalDistanceCh <- ChairTotalDistance{
+	// 	ChairID:       chair.ID,
+	// 	TotalDistance: distance,
+	// }
+
+	if _, err := tx.ExecContext(
+		ctx,
+		`INSERT INTO chair_total_distances (chair_id, total_distance)
+		 VALUES (?, ?)
+		 ON DUPLICATE KEY UPDATE total_distance = total_distance + VALUES(total_distance)`,
+		chair.ID, distance,
+	); err != nil {
+		writeError(w, http.StatusInternalServerError, err)
+		return
 	}
-
-	// if _, err := db.ExecContext(
-	// 	ctx,
-	// 	`INSERT INTO chair_total_distances (chair_id, total_distance)
-	// 	 VALUES (?, ?)
-	// 	 ON DUPLICATE KEY UPDATE total_distance = total_distance + VALUES(total_distance)`,
-	// 	chair.ID, distance,
-	// ); err != nil {
-	// 	writeError(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
-
-	// location := &ChairLocation{}
-	// if err := tx.GetContext(ctx, location, `SELECT * FROM chair_locations WHERE id = ?`, chairLocationID); err != nil {
-	// 	writeError(w, http.StatusInternalServerError, err)
-	// 	return
-	// }
 
 	var newStatus string
 
@@ -210,11 +202,6 @@ func chairPostCoordinate(w http.ResponseWriter, r *http.Request) {
 			Ride:   *ride,
 			Status: newStatus,
 		})
-		eb.Publish(chair.ID, RideStatusEventData{
-			Ride:   *ride,
-			UserID: ride.UserID,
-			Status: newStatus,
-		})
 	}
 
 	writeJSON(w, http.StatusOK, &chairPostCoordinateResponse{
@@ -257,7 +244,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 	if err := tx.GetContext(ctx, ride, `SELECT * FROM rides WHERE chair_id = ? ORDER BY updated_at DESC LIMIT 1`, chair.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeJSON(w, http.StatusOK, &chairGetNotificationResponse{
-				RetryAfterMs: 1000,
+				RetryAfterMs: 500,
 			})
 			return
 		}
@@ -317,7 +304,7 @@ func chairGetNotification(w http.ResponseWriter, r *http.Request) {
 			},
 			Status: status,
 		},
-		RetryAfterMs: 1000,
+		RetryAfterMs: 500,
 	})
 }
 
@@ -403,11 +390,6 @@ func chairPostRideStatus(w http.ResponseWriter, r *http.Request) {
 	if req.Status == "ENROUTE" || req.Status == "CARRYING" {
 		eb.Publish(ride.UserID, RideStatusEventData{
 			Ride:   *ride,
-			Status: req.Status,
-		})
-		eb.Publish(chair.ID, RideStatusEventData{
-			Ride:   *ride,
-			UserID: ride.UserID,
 			Status: req.Status,
 		})
 	}

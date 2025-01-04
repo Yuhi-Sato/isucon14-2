@@ -29,6 +29,13 @@ type ChairLocation struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+type ChairWithLatLonModel struct {
+	ID        string        `db:"id"`
+	Latitude  sql.NullInt64 `db:"latitude"`
+	Longitude sql.NullInt64 `db:"longitude"`
+	Model     string        `db:"model"`
+}
+
 type ChairWithLatLon struct {
 	ID          string    `db:"id"`
 	OwnerID     string    `db:"owner_id"`
