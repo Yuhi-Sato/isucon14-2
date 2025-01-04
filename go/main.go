@@ -111,7 +111,7 @@ func chairTotalDistanceProcess(ctx context.Context) {
 		select {
 		case chairTotalDistance := <-chairTotalDistanceCh:
 			chairTotalDistances = append(chairTotalDistances, chairTotalDistance)
-		case <-time.After(2 * time.Second):
+		case <-time.After(time.Second):
 			if len(chairTotalDistances) == 0 {
 				continue
 			}
@@ -303,7 +303,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 		chairModelByModel[model.Name] = model
 	}
 
-	go chairTotalDistanceProcess(ctx)
+	// go chairTotalDistanceProcess(ctx)
 
 	writeJSON(w, http.StatusOK, postInitializeResponse{Language: "go"})
 }
